@@ -24,16 +24,19 @@ build-%:
 	  exit 1; \
 	fi; \
 	classes="$$(echo "$$files" | sed "s|^$(SRC_DIR)|$(BIN_DIR)|;s|\.java$$|.class|")"; \
-	if $(MAKE) -s $$classes; then \
-	  if [ "$(MAKECMDGOALS)" = "build-$*" ]; then \
+	$(MAKE) -s $$classes || exit $$?; \
+	if [ "$(MAKECMDGOALS)" = "build-$*" ]; then \
+	  up_to_date=1; \
+	  for f in $$classes; do \
+	    if [ ! -f $$f ]; then up_to_date=0; fi; \
+	  done; \
+	  if [ $$up_to_date -eq 1 ]; then \
 	    echo "[BUILD] Nothing to be done."; \
 	  fi; \
-	else \
-	  $(MAKE) -s $$classes; \
 	fi
 
 run-%: build-%
-	@$(JAVA) -cp $(BIN_DIR) $*.Main
+	@$(JAVA) -cp $(BIN_DIR) $*.Main $(ARGS)
 
 clean:
 	@rm -rf $(BIN_DIR)/*
