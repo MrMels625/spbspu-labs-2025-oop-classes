@@ -1,43 +1,53 @@
-.PHONY: all build-% run-% clean
+JCC = javac
+JVM = java
 
-SRC_DIR   := src
-BIN_DIR   := bin
+SRC_DIR = src
+BIN_DIR = bin
 
-SRCS      := $(wildcard $(SRC_DIR)/**/*.java)
-CLSS      := $(patsubst $(SRC_DIR)/%.java,$(BIN_DIR)/%.class,$(SRCS))
+ARGS ?=
 
-JC        := javac
-JAVA      := java
-JCFLAGS   := -d $(BIN_DIR)
+JFLAGS = -d $(BIN_DIR) -sourcepath $(SRC_DIR)
 
-all: $(CLSS)
+PROJECTS := $(notdir $(wildcard $(SRC_DIR)/*))
 
-$(BIN_DIR)/%.class: $(SRC_DIR)/%.java
-	@echo "[BUILD] $<"
-	@mkdir -p $(dir $@)
-	$(JC) $(JCFLAGS) $<
+define PROJECT_RULES
+$(1)_SRCS := $(wildcard $(SRC_DIR)/$(1)/*.java)
+$(1)_CLASSES := $$(patsubst $(SRC_DIR)/%.java,$(BIN_DIR)/%.class,$$($(1)_SRCS))
 
-build-%:
-	@files="$$(find $(SRC_DIR)/$* -name '*.java')"; \
-	if [ -z "$$files" ]; then \
-	  echo "[ERROR] No sources for $*."; \
-	  exit 1; \
-	fi; \
-	classes="$$(echo "$$files" | sed "s|^$(SRC_DIR)|$(BIN_DIR)|;s|\.java$$|.class|")"; \
-	$(MAKE) -s $$classes || exit $$?; \
-	if [ "$(MAKECMDGOALS)" = "build-$*" ]; then \
-	  up_to_date=1; \
-	  for f in $$classes; do \
-	    if [ ! -f $$f ]; then up_to_date=0; fi; \
-	  done; \
-	  if [ $$up_to_date -eq 1 ]; then \
-	    echo "[BUILD] Nothing to be done."; \
-	  fi; \
+.PHONY: build-$(1)
+build-$(1): $$($(1)_CLASSES)
+	@if [ -z "$$?" ]; then \
+		echo "[BUILD] Nothing to be done."; \
 	fi
 
-run-%: build-%
-	@$(JAVA) -cp $(BIN_DIR) $*.Main $(ARGS)
+.PHONY: run-$(1)
+run-$(1): build-$(1)
+	@$(JVM) -cp $(BIN_DIR) $(1).Main $(ARGS)
 
+endef
+
+$(foreach proj,$(PROJECTS),$(eval $(call PROJECT_RULES,$(proj))))
+
+$(BIN_DIR)/%.class: $(SRC_DIR)/%.java
+	@mkdir -p $(dir $@)
+	@echo "[BUILD] $<"
+	@$(JCC) $(JFLAGS) $<
+
+.PHONY: clean
 clean:
-	@rm -rf $(BIN_DIR)/*
+	rm -rf $(BIN_DIR)/*
+
+.DEFAULT_GOAL := help
+
+.PHONY: help
+help:
+	@echo "Usage: make [target] [ARGS=\"...\"]"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  make build-<name>    Compile project"
+	@echo "  make run-<name>      Run project"
+	@echo "  make clean           Clean the bin/"
+	@echo ""
+	@echo "Available projects: $(PROJECTS)"
+	@echo ""
 
