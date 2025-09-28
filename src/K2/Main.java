@@ -4,52 +4,51 @@ class Main
 {
   public static void main(String[] args)
   {
+    if (args.length == 0)
+    {
+      System.err.println("ERROR: Not enough arguments!");
+      System.exit(1);
+    }
+
     for (int i = 0; i < args.length; ++i)
     {
-      try
+      int res = parseTricky(args[i]);
+      if (res == -1)
       {
-        System.out.printf("%s = %d\n", args[i], parseTricky(args[i]));
+        System.err.println("ERROR: String is empty!");
       }
-      catch (IllegalArgumentException e)
+      else if (res == -2)
       {
-        System.out.printf("ERROR: %s\n", e.getMessage());
+        System.err.println("ERROR: Invalid Roman number!");
+      }
+      else if (res > 0)
+      {
+        System.out.printf("%s = %d\n", args[i], res);
       }
     }
+
+    System.exit(0);
   }
 
   private static int parseTricky(String str)
   {
-    if (str != null && str.length() == 0)
+    if (str == null || str.length() == 0)
     {
-      throw new IllegalArgumentException("Empty string!");
+      return -1;
     }
-
     if (!isValidRoman(str))
     {
-      throw new IllegalArgumentException("Incorrect roman numeral format!");
+      return -2;
     }
-
     int res = 0;
     int prev = 0;
     for (int i = str.length() - 1; i >= 0; --i)
     {
-      int curr = decipherSymbol(str.charAt(i));
+      int curr = RomanSymbol.valueOf(String.valueOf(str.charAt(i))).getValue();
       res = curr < prev ? res - curr : res + curr;
       prev = curr;
     }
     return res;
-  }
-
-  private static int decipherSymbol(char c)
-  {
-    try
-    {
-      return RomanSymbol.valueOf(String.valueOf(c)).value();
-    }
-    catch (IllegalArgumentException e)
-    {
-      throw new IllegalArgumentException("Incorrect roman digit '" + c + '\'');
-    }
   }
 
   private enum RomanSymbol
@@ -69,7 +68,7 @@ class Main
       this.value = value;
     }
 
-    public int value()
+    public int getValue()
     {
       return value;
     }
